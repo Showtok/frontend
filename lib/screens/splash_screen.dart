@@ -20,15 +20,11 @@ class SplashScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(
-              'assets/logo.png', // 로고 이미지 경로
-              width: 120,
-              height: 120,
+              'assets/logoplus.png', // 로고 이미지 경로
+              width: 230,
+              height: 245,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Showtok',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            )
           ],
         ),
       ),

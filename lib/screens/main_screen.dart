@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:showtok/screens/profile_screen.dart';
+import 'package:showtok/screens/guest_profile_screen.dart';
+import 'package:showtok/utils/auth_util.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
@@ -49,8 +51,13 @@ class MainScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('$label 카테고리',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(
+                '$label 카테고리',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 16),
               ...['초급', '중급', '고급', '게시판'].map((level) {
                 return ListTile(
@@ -109,13 +116,19 @@ class MainScreen extends StatelessWidget {
                       color: Colors.black.withOpacity(0.05),
                       blurRadius: 5,
                       offset: const Offset(0, 2),
-                    )
+                    ),
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('🔥 인기글 TOP 3', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      '🔥 인기글 TOP 3',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     ListView.builder(
                       itemCount: 3,
@@ -127,9 +140,12 @@ class MainScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: const [
-                              Text('게시글 제목', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text(
+                                '게시글 제목',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
                               SizedBox(height: 4),
-                              Text('작성자 ID')
+                              Text('작성자 ID'),
                             ],
                           ),
                         );
@@ -150,13 +166,19 @@ class MainScreen extends StatelessWidget {
                       color: Colors.black.withOpacity(0.05),
                       blurRadius: 5,
                       offset: const Offset(0, 2),
-                    )
+                    ),
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('📂 카테고리', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      '📂 카테고리',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 24),
                     GridView.count(
                       crossAxisCount: 3,
@@ -165,26 +187,41 @@ class MainScreen extends StatelessWidget {
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                       childAspectRatio: 1.2,
-                      children: aiCategories.map((category) {
-                        return InkWell(
-                          onTap: () => _showCategoryPopup(context, category['label']),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE0F2F1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(category['emoji'], style: const TextStyle(fontSize: 24, height: 1.1)),
+                      children:
+                          aiCategories.map((category) {
+                            return InkWell(
+                              onTap:
+                                  () => _showCategoryPopup(
+                                    context,
+                                    category['label'],
+                                  ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE0F2F1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      category['emoji'],
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        height: 1.1,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    category['label'],
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 6),
-                              Text(category['label'], textAlign: TextAlign.center, style: const TextStyle(fontSize: 13)),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                            );
+                          }).toList(),
                     ),
                   ],
                 ),
@@ -203,14 +240,24 @@ class MainScreen extends StatelessWidget {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
           BottomNavigationBarItem(icon: Icon(Icons.mail_outline), label: '쪽지'),
           BottomNavigationBarItem(icon: Icon(Icons.add), label: '기능예정'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: '프로필'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: '프로필',
+          ),
         ],
-        onTap: (index) {
-           if (index == 3) {
-          Navigator.push(
-            context,
-          MaterialPageRoute(builder: (_) => const ProfileScreen()),
-             );
+        onTap: (index) async {
+          if (index == 3) {
+            final loggedIn = await AuthUtil.isLoggedIn();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (_) =>
+                        loggedIn
+                            ? const ProfileScreen()
+                            : const GuestProfileScreen(),
+              ),
+            );
           }
         },
       ),
