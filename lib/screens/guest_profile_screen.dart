@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import 'main_screen.dart'; // ✅ 메인화면 임포트
-import 'package:showtok/constants/api_config.dart';
+import 'board_screen.dart';
 
 class GuestProfileScreen extends StatelessWidget {
   const GuestProfileScreen({super.key});
@@ -20,7 +20,7 @@ class GuestProfileScreen extends StatelessWidget {
             color: Colors.black.withOpacity(0.05),
             blurRadius: 5,
             offset: const Offset(0, 2),
-          )
+          ),
         ],
       ),
       child: Column(children: children),
@@ -71,7 +71,7 @@ class GuestProfileScreen extends StatelessWidget {
                       color: Colors.black.withOpacity(0.05),
                       blurRadius: 5,
                       offset: const Offset(0, 2),
-                    )
+                    ),
                   ],
                 ),
                 child: const Center(
@@ -117,21 +117,30 @@ class GuestProfileScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         selectedItemColor: Colors.black,
         unselectedItemColor: Colors.grey,
-        currentIndex: 3, // 프로필 탭 선택
+        currentIndex: 3, // 현재 위치는 '프로필'
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
           BottomNavigationBarItem(icon: Icon(Icons.mail_outline), label: '쪽지'),
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: '기능예정'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: '프로필'),
+          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: '게시판'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: '프로필',
+          ),
         ],
-        onTap: (index) {
+        onTap: (index) async {
           if (index == 0) {
-            // ✅ 홈 탭 누르면 메인화면으로 이동
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const MainScreen()),
             );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const BoardScreen()),
+            );
+          } else if (index == 3) {
+            // 현재 프로필 화면이므로 아무 동작 안 함
           }
         },
       ),

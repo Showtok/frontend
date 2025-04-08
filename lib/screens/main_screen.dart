@@ -1,9 +1,12 @@
+// ✅ 전체 MainScreen.dart 파일 (인기글 + 게시판 탭 포함)
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:showtok/screens/profile_screen.dart';
 import 'package:showtok/screens/guest_profile_screen.dart';
 import 'package:showtok/screens/settings_screen.dart';
+import 'package:showtok/screens/board_screen.dart'; // 게시판 화면 import
 import 'package:showtok/utils/auth_util.dart';
 import 'package:showtok/constants/api_config.dart';
 
@@ -25,20 +28,25 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _fetchPopularPosts() async {
     try {
-      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/posts/popular'));
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/api/posts/popular'),
+      );
 
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
 
-        print('🔥 인기글 응답 데이터: $data'); // 👉 디버깅용 콘솔 출력
-
         setState(() {
-          popularPosts = data.map<Map<String, dynamic>>((e) => {
-            'title': e['title'],
-            'category': e['category'] ?? '카테고리 없음',
-            'likeCount': e['likeCount'] ?? 0,
-            'commentCount': e['commentCount'] ?? 0,
-          }).toList();
+          popularPosts =
+              data
+                  .map<Map<String, dynamic>>(
+                    (e) => {
+                      'title': e['title'],
+                      'category': e['category'] ?? '카테고리 없음',
+                      'likeCount': e['likeCount'] ?? 0,
+                      'commentCount': e['commentCount'] ?? 0,
+                    },
+                  )
+                  .toList();
         });
       } else {
         print('🔥 서버 응답 에러: ${res.statusCode}');
@@ -93,7 +101,13 @@ class _MainScreenState extends State<MainScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('$label 카테고리', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(
+                '$label 카테고리',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 16),
               ...['초급', '중급', '고급', '게시판'].map((level) {
                 return ListTile(
@@ -101,7 +115,6 @@ class _MainScreenState extends State<MainScreen> {
                   title: Text(level),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: 이동 처리
                   },
                 );
               }),
@@ -123,9 +136,7 @@ class _MainScreenState extends State<MainScreen> {
           padding: const EdgeInsets.all(8.0),
           child: Row(
             children: [
-              Image.asset('assets/logo.png', width: 32),
-              const SizedBox(width: 3),
-              Image.asset('assets/logotext.png', height: 60), // ✅ 추가
+              Image.asset('assets/logo2.png', width: 32),
             ],
           ),
         ),
@@ -151,7 +162,7 @@ class _MainScreenState extends State<MainScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // 🔥 인기글
+              // 🔥 인기글 박스
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -170,30 +181,57 @@ class _MainScreenState extends State<MainScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('🔥 인기글 TOP 3', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      '🔥 인기글 TOP 3',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 12),
-                    ...popularPosts.map((post) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(post['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 4),
-                              Text('카테고리: ${post['category']}'),
-                              Row(
-                                children: [
-                                  const Icon(Icons.thumb_up_alt_outlined, size: 14),
-                                  const SizedBox(width: 4),
-                                  Text('${post['likeCount']}'),
-                                  const SizedBox(width: 12),
-                                  const Icon(Icons.comment_outlined, size: 14),
-                                  const SizedBox(width: 4),
-                                  Text('${post['commentCount']}'),
-                                ],
-                              ),
-                            ],
-                          ),
-                        )),
+                    ...popularPosts.map(
+                      (post) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    post['title'],
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.thumb_up_alt_outlined,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text('${post['likeCount']}'),
+                                    const SizedBox(width: 8),
+                                    const Icon(
+                                      Icons.comment_outlined,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text('${post['commentCount']}'),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text('카테고리: ${post['category']}'),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -216,7 +254,13 @@ class _MainScreenState extends State<MainScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('📂 카테고리', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      '📂 카테고리',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 24),
                     GridView.count(
                       crossAxisCount: 3,
@@ -225,26 +269,41 @@ class _MainScreenState extends State<MainScreen> {
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                       childAspectRatio: 1.2,
-                      children: aiCategories.map((category) {
-                        return InkWell(
-                          onTap: () => _showCategoryPopup(context, category['label']),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE0F2F1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(category['emoji'], style: const TextStyle(fontSize: 24, height: 1.1)),
+                      children:
+                          aiCategories.map((category) {
+                            return InkWell(
+                              onTap:
+                                  () => _showCategoryPopup(
+                                    context,
+                                    category['label'],
+                                  ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE0F2F1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      category['emoji'],
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        height: 1.1,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    category['label'],
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 6),
-                              Text(category['label'], textAlign: TextAlign.center, style: const TextStyle(fontSize: 13)),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                            );
+                          }).toList(),
                     ),
                   ],
                 ),
@@ -257,21 +316,37 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: Colors.white,
         selectedItemColor: Colors.black,
         unselectedItemColor: Colors.grey,
-        currentIndex: 0,
+        currentIndex: 0, // 홈 화면 기준
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
           BottomNavigationBarItem(icon: Icon(Icons.mail_outline), label: '쪽지'),
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: '기능예정'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: '프로필'),
+          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: '게시판'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: '프로필',
+          ),
         ],
         onTap: (index) async {
-          if (index == 3) {
+          if (index == 0) {
+            // 현재 화면이 홈이면 무시하거나 새로고침 등 처리 가능
+          } else if (index == 1) {
+            // 쪽지 화면은 아직 구현 전이라면 나중에 연결
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const BoardScreen()),
+            );
+          } else if (index == 3) {
             final loggedIn = await AuthUtil.isLoggedIn();
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => loggedIn ? const ProfileScreen() : const GuestProfileScreen(),
+                builder:
+                    (_) =>
+                        loggedIn
+                            ? const ProfileScreen()
+                            : const GuestProfileScreen(),
               ),
             );
           }

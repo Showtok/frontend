@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:jwt_decode/jwt_decode.dart';
 
 class AuthUtil {
   static const _tokenKey = 'jwt_token';
@@ -22,4 +23,14 @@ class AuthUtil {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
   }
+
+  static Future<String?> getUsername() async {
+    final token = await getToken();
+    if (token == null) return null;
+
+    Map<String, dynamic> payload = Jwt.parseJwt(token);
+    return payload['sub']; // 또는 'username' 키로 바꿔야 할 수도 있음
+  }
+
+
 }
