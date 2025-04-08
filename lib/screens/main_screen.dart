@@ -1,10 +1,52 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:showtok/screens/profile_screen.dart';
 import 'package:showtok/screens/guest_profile_screen.dart';
+import 'package:showtok/screens/settings_screen.dart';
 import 'package:showtok/utils/auth_util.dart';
+import 'package:showtok/constants/api_config.dart';
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  List<Map<String, dynamic>> popularPosts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPopularPosts();
+  }
+
+  Future<void> _fetchPopularPosts() async {
+    try {
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/posts/popular'));
+
+      if (res.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
+
+        print('🔥 인기글 응답 데이터: $data'); // 👉 디버깅용 콘솔 출력
+
+        setState(() {
+          popularPosts = data.map<Map<String, dynamic>>((e) => {
+            'title': e['title'],
+            'category': e['category'] ?? '카테고리 없음',
+            'likeCount': e['likeCount'] ?? 0,
+            'commentCount': e['commentCount'] ?? 0,
+          }).toList();
+        });
+      } else {
+        print('🔥 서버 응답 에러: ${res.statusCode}');
+      }
+    } catch (e) {
+      print('🔥 인기글 로딩 오류: $e');
+    }
+  }
 
   static const List<Map<String, dynamic>> aiCategories = [
     {'emoji': '🎨', 'label': '그림 / 이미지'},
@@ -51,13 +93,7 @@ class MainScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                '$label 카테고리',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('$label 카테고리', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               ...['초급', '중급', '고급', '게시판'].map((level) {
                 return ListTile(
@@ -68,7 +104,7 @@ class MainScreen extends StatelessWidget {
                     // TODO: 이동 처리
                   },
                 );
-              }).toList(),
+              }),
             ],
           ),
         );
@@ -85,8 +121,15 @@ class MainScreen extends StatelessWidget {
         elevation: 0.5,
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Image.asset('assets/logo.png'),
+          child: Row(
+            children: [
+              Image.asset('assets/logo.png', width: 32),
+              const SizedBox(width: 3),
+              Image.asset('assets/logotext.png', height: 60), // ✅ 추가
+            ],
+          ),
         ),
+        leadingWidth: 140,
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: Colors.black),
@@ -94,7 +137,12 @@ class MainScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.black),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
           ),
         ],
       ),
@@ -103,7 +151,7 @@ class MainScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // 🔥 인기글 박스
+              // 🔥 인기글
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -122,38 +170,34 @@ class MainScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '🔥 인기글 TOP 3',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    const Text('🔥 인기글 TOP 3', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
-                    ListView.builder(
-                      itemCount: 3,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    ...popularPosts.map((post) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                '게시글 제목',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                            children: [
+                              Text(post['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 4),
+                              Text('카테고리: ${post['category']}'),
+                              Row(
+                                children: [
+                                  const Icon(Icons.thumb_up_alt_outlined, size: 14),
+                                  const SizedBox(width: 4),
+                                  Text('${post['likeCount']}'),
+                                  const SizedBox(width: 12),
+                                  const Icon(Icons.comment_outlined, size: 14),
+                                  const SizedBox(width: 4),
+                                  Text('${post['commentCount']}'),
+                                ],
                               ),
-                              SizedBox(height: 4),
-                              Text('작성자 ID'),
                             ],
                           ),
-                        );
-                      },
-                    ),
+                        )),
                   ],
                 ),
               ),
+
               // 📂 카테고리 박스
               Container(
                 width: double.infinity,
@@ -172,13 +216,7 @@ class MainScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '📂 카테고리',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    const Text('📂 카테고리', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 24),
                     GridView.count(
                       crossAxisCount: 3,
@@ -187,41 +225,26 @@ class MainScreen extends StatelessWidget {
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                       childAspectRatio: 1.2,
-                      children:
-                          aiCategories.map((category) {
-                            return InkWell(
-                              onTap:
-                                  () => _showCategoryPopup(
-                                    context,
-                                    category['label'],
-                                  ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE0F2F1),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      category['emoji'],
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        height: 1.1,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    category['label'],
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                ],
+                      children: aiCategories.map((category) {
+                        return InkWell(
+                          onTap: () => _showCategoryPopup(context, category['label']),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE0F2F1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(category['emoji'], style: const TextStyle(fontSize: 24, height: 1.1)),
                               ),
-                            );
-                          }).toList(),
+                              const SizedBox(height: 6),
+                              Text(category['label'], textAlign: TextAlign.center, style: const TextStyle(fontSize: 13)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ],
                 ),
@@ -240,10 +263,7 @@ class MainScreen extends StatelessWidget {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
           BottomNavigationBarItem(icon: Icon(Icons.mail_outline), label: '쪽지'),
           BottomNavigationBarItem(icon: Icon(Icons.add), label: '기능예정'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: '프로필',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: '프로필'),
         ],
         onTap: (index) async {
           if (index == 3) {
@@ -251,11 +271,7 @@ class MainScreen extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder:
-                    (_) =>
-                        loggedIn
-                            ? const ProfileScreen()
-                            : const GuestProfileScreen(),
+                builder: (_) => loggedIn ? const ProfileScreen() : const GuestProfileScreen(),
               ),
             );
           }

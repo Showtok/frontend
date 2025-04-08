@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:showtok/utils/auth_util.dart';
 import 'package:showtok/screens/main_screen.dart';
 import 'package:showtok/screens/signup_screen.dart';
+import 'package:showtok/constants/api_config.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -97,7 +98,7 @@ class LoginScreen extends StatelessWidget {
 
                     try {
                       final response = await http.post(
-                        Uri.parse('http://10.0.2.2:8080/api/auth/login'),
+                        Uri.parse('${ApiConfig.baseUrl}/api/auth/login'),
                         headers: {'Content-Type': 'application/json'},
                         body: jsonEncode({'username': id, 'password': pw}),
                       );
@@ -119,6 +120,7 @@ class LoginScreen extends StatelessWidget {
                         );
                       }
                     } catch (e) {
+                      print(e.toString());
                       showDialog(
                         context: context,
                         builder: (_) => const AlertDialog(

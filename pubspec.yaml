@@ -29,3 +29,9 @@ flutter:
     - assets/google_logo.png
     - assets/logotext.png
     - assets/logoplus.png
+  
+  fonts:
+    - family: NotoSansKR
+      fonts:
+        - asset: assets/fonts/NotoSansKR-Regular.ttf
+        - asset: assets/fonts/NotoSansKR-Bold.ttf

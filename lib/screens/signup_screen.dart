@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:showtok/screens/login_screen.dart';
+import 'package:showtok/constants/api_config.dart';
 
 class SignUpScreen extends StatelessWidget {
   const SignUpScreen({super.key});
@@ -73,7 +74,7 @@ class SignUpScreen extends StatelessWidget {
 
                     try {
                       final response = await http.post(
-                        Uri.parse('http://10.0.2.2:8080/api/auth/signup'),
+                        Uri.parse('${ApiConfig.baseUrl}/api/auth/signup'),
                         headers: {'Content-Type': 'application/json'},
                         body: jsonEncode({
                           'username': username,
@@ -82,6 +83,9 @@ class SignUpScreen extends StatelessWidget {
                           'phone': phone,
                         }),
                       );
+
+                      print('🟡 응답 상태코드: ${response.statusCode}');
+                      print('🟡 응답 바디: ${response.body}');
 
                       if (response.statusCode == 200) {
                         if (!context.mounted) return;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import 'main_screen.dart'; // ✅ 메인화면 임포트
+import 'package:showtok/constants/api_config.dart';
 
 class GuestProfileScreen extends StatelessWidget {
   const GuestProfileScreen({super.key});
