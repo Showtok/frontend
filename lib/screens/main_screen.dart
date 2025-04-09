@@ -1,4 +1,4 @@
-
+// 📱 MainScreen.dart - 챗봇 아이콘 및 대화 UI 포함
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -20,6 +20,10 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   List<Map<String, dynamic>> popularPosts = [];
+  bool _showChatBot = false;
+  final TextEditingController _chatController = TextEditingController();
+  final List<Map<String, String>> _chatMessages = [];
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -124,192 +128,336 @@ class _MainScreenState extends State<MainScreen> {
     {'emoji': '🕹️', 'label': '게임 AI'},
   ];
 
+  Future<void> _sendMessage() async {
+    final userText = _chatController.text.trim();
+    if (userText.isEmpty) return;
+    _chatController.clear();
+
+    setState(() {
+      _chatMessages.add({'role': 'user', 'text': userText});
+      _isSending = true;
+    });
+
+    const apiKey = 'AIzaSyD21AsjmlXBn4q_YvAs2MrAGlUmjXW8808';
+    final url = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=$apiKey';
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "contents": [
+            {
+              "parts": [
+                {"text": userText}
+              ]
+            }
+          ]
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      final reply = data['candidates']?[0]['content']['parts'][0]['text'] ?? '답변을 불러오지 못했어요';
+      setState(() {
+        _chatMessages.add({'role': 'ai', 'text': reply});
+        _isSending = false;
+      });
+    } catch (e) {
+      setState(() {
+        _chatMessages.add({'role': 'ai', 'text': '오류가 발생했어요 😢'});
+        _isSending = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 5.0, top: 2.0, bottom: 2.0),
-          child: Row(
-            children: [
-              Image.asset('assets/logo2.png', width: 100, height: 80),
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: const Color(0xFFF5F5F5),
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0.5,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 5.0, top: 2.0, bottom: 2.0),
+              child: Row(
+                children: [
+                  Image.asset('assets/logo2.png', width: 100, height: 80),
+                ],
+              ),
+            ),
+            leadingWidth: 160,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.search, color: Colors.black),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BoardScreen()),
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings, color: Colors.black),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
+              ),
             ],
           ),
-        ),
-        leadingWidth: 160,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.black),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const BoardScreen()),
-              );
+          body: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('🔥 인기글 TOP 3', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 12),
+                        ...popularPosts.map((post) => InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PostDetailScreen(postId: post['id']),
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(post['title'], style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                                    ),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.thumb_up_alt_outlined, size: 14),
+                                        const SizedBox(width: 2),
+                                        Text('${post['likeCount']}'),
+                                        const SizedBox(width: 8),
+                                        const Icon(Icons.comment_outlined, size: 14),
+                                        const SizedBox(width: 2),
+                                        Text('${post['commentCount']}'),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text('카테고리: ${post['category']}'),
+                              ],
+                            ),
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('📂 카테고리', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 24),
+                        GridView.count(
+                          crossAxisCount: 3,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1.2,
+                          children: aiCategories.map((category) {
+                            final isVideo = category['label'] == '영상 제작';
+                            return InkWell(
+                              onTap: () => _onCategoryTap(category['label']),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: isVideo ? 48 : null,
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE0F2F1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(category['emoji'], style: const TextStyle(fontSize: 24, height: 1.1)),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(category['label'], textAlign: TextAlign.center, style: const TextStyle(fontSize: 13)),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          bottomNavigationBar: BottomNavigationBar(
+            backgroundColor: Colors.white,
+            selectedItemColor: Colors.black,
+            unselectedItemColor: Colors.grey,
+            currentIndex: 0,
+            type: BottomNavigationBarType.fixed,
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
+              BottomNavigationBarItem(icon: Icon(Icons.mail_outline), label: '쪽지'),
+              BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: '게시판'),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: '프로필'),
+            ],
+            onTap: (index) async {
+              if (index == 1) {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const MessageScreen()));
+              } else if (index == 2) {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const BoardScreen()));
+              } else if (index == 3) {
+                final loggedIn = await AuthUtil.isLoggedIn();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => loggedIn ? const ProfileScreen() : const GuestProfileScreen()),
+                );
+              }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                margin: const EdgeInsets.only(bottom: 20),
+          floatingActionButton: Positioned(
+            bottom: 100,
+            right: 40, // 👈 원래보다 왼쪽으로 이동
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showChatBot = true;
+                });
+              },
+              child: Container(
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
+                  shape: BoxShape.circle,
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('🔥 인기글 TOP 3', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
-                    ...popularPosts.map((post) => InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PostDetailScreen(postId: post['id']),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Image.asset('assets/chatbot.png'),
+                ),
+              ),
+            ),
+          ),
+
+        ),
+        if (_showChatBot)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Scaffold(
+              appBar: AppBar(
+                backgroundColor: Colors.white,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  onPressed: () => setState(() => _showChatBot = false),
+                ),
+                title: const Text('챗봇과 대화하기', style: TextStyle(color: Colors.black)),
+              ),
+              body: Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _chatMessages.length,
+                      itemBuilder: (context, index) {
+                        final msg = _chatMessages[index];
+                        final isUser = msg['role'] == 'user';
+                        return Align(
+                          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isUser ? Colors.blue.shade100 : Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(msg['text'] ?? ''),
                           ),
                         );
                       },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(post['title'], style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                                ),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.thumb_up_alt_outlined, size: 14),
-                                    const SizedBox(width: 2),
-                                    Text('${post['likeCount']}'),
-                                    const SizedBox(width: 8),
-                                    const Icon(Icons.comment_outlined, size: 14),
-                                    const SizedBox(width: 2),
-                                    Text('${post['commentCount']}'),
-                                  ],
-                                ),
-                              ],
+                    ),
+                  ),
+                  if (_isSending) const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: CircularProgressIndicator(),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _chatController,
+                            decoration: const InputDecoration(
+                              hintText: '메시지를 입력하세요',
+                              border: OutlineInputBorder(),
                             ),
-                            const SizedBox(height: 4),
-                            Text('카테고리: ${post['category']}'),
-                          ],
-                        ),
-                      ),
-                    )),
-                  ],
-                ),
-              ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('📂 카테고리', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 24),
-                    GridView.count(
-                      crossAxisCount: 3,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 1.2,
-                      children: aiCategories.map((category) {
-                        final isVideo = category['label'] == '영상 제작';
-                        return InkWell(
-                          onTap: () => _onCategoryTap(category['label']),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: isVideo ? 48 : null,
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE0F2F1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(category['emoji'], style: const TextStyle(fontSize: 24, height: 1.1)),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(category['label'], textAlign: TextAlign.center, style: const TextStyle(fontSize: 13)),
-                            ],
                           ),
-                        );
-                      }).toList(),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.send),
+                          onPressed: _isSending ? null : _sendMessage,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.grey,
-        currentIndex: 0,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
-          BottomNavigationBarItem(icon: Icon(Icons.mail_outline), label: '쪽지'),
-          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: '게시판'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: '프로필'),
-        ],
-        onTap: (index) async {
-          if (index == 1) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const MessageScreen()));
-          } else if (index == 2) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const BoardScreen()));
-          } else if (index == 3) {
-            final loggedIn = await AuthUtil.isLoggedIn();
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => loggedIn ? const ProfileScreen() : const GuestProfileScreen()),
-            );
-          }
-        },
-      ),
+      ],
     );
   }
 }
