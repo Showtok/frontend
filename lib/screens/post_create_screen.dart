@@ -1,9 +1,14 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart'; // kIsWeb
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:showtok/constants/api_config.dart';
-import 'dart:io';
+import 'package:showtok/screens/board_screen.dart';
+import 'package:showtok/utils/auth_util.dart';
 
 class PostCreateScreen extends StatefulWidget {
   const PostCreateScreen({super.key});
@@ -18,7 +23,7 @@ class _PostCreateScreenState extends State<PostCreateScreen> {
   String selectedLevel = 'BEGINNER';
   String selectedCategory = 'DRAWING';
   String selectedPostCategory = 'FREE';
-  XFile? _selectedImage;
+  List<XFile> _selectedImages = [];
 
   final levelMap = {
     'BEGINNER': '초급',
@@ -42,13 +47,91 @@ class _PostCreateScreenState extends State<PostCreateScreen> {
     'QUESTION': '질문',
   };
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImages() async {
     final ImagePicker picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
+    final picked = await picker.pickMultiImage();
+    if (picked.isNotEmpty) {
       setState(() {
-        _selectedImage = picked;
+        _selectedImages = picked;
       });
+    }
+  }
+
+  Future<void> _submitPost() async {
+    try {
+      final token = await AuthUtil.getToken();
+      if (token == null) throw Exception('로그인이 필요합니다.');
+
+      List<String> imageUrls = [];
+
+      for (XFile image in _selectedImages) {
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse('${ApiConfig.baseUrl}/api/files/upload'),
+        );
+
+        if (kIsWeb) {
+          Uint8List bytes = await image.readAsBytes();
+          request.files.add(http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: image.name,
+          ));
+        } else {
+          request.files.add(await http.MultipartFile.fromPath(
+            'file',
+            image.path,
+          ));
+        }
+
+        final response = await request.send();
+        if (response.statusCode == 200) {
+          final resString = await response.stream.bytesToString();
+          imageUrls.add(resString.replaceAll('"', ''));
+        } else {
+          throw Exception('이미지 업로드 실패');
+        }
+      }
+
+      String contentWithImages = _contentController.text;
+      for (String url in imageUrls) {
+        contentWithImages += '\n\n![image]($url)';
+      }
+
+      final postData = {
+        'title': _titleController.text,
+        'content': contentWithImages,
+        'category': selectedCategory,
+        'postCategory': selectedPostCategory,
+        'level': selectedLevel,
+      };
+
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/api/posts'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(postData),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('게시글이 성공적으로 등록되었습니다!')),
+        );
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const BoardScreen()),
+              (route) => false,
+        );
+      } else {
+        throw Exception('글 작성 실패: ${response.body}');
+      }
+    } catch (e) {
+      print('에러: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('오류 발생: ${e.toString()}')),
+      );
     }
   }
 
@@ -129,25 +212,45 @@ class _PostCreateScreenState extends State<PostCreateScreen> {
 
               // 이미지 선택
               OutlinedButton.icon(
-                onPressed: _pickImage,
+                onPressed: _pickImages,
                 icon: const Icon(Icons.image),
-                label: const Text('이미지 추가'),
+                label: const Text('이미지 추가 (여러 장 가능)'),
               ),
-              if (_selectedImage != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Image.file(
-                    File(_selectedImage!.path),
-                    height: 150,
-                    fit: BoxFit.cover,
+              if (_selectedImages.isNotEmpty)
+                SizedBox(
+                  height: 150,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _selectedImages.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final image = _selectedImages[index];
+
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: kIsWeb
+                            ? Image.network(
+                          image.path,
+                          width: 150,
+                          height: 150,
+                          fit: BoxFit.cover,
+                        )
+                            : Image.file(
+                          File(image.path),
+                          width: 150,
+                          height: 150,
+                          fit: BoxFit.cover,
+                        ),
+                      );
+                    },
                   ),
                 ),
-
               const SizedBox(height: 16),
+
+              // 작성 버튼
               ElevatedButton(
-                onPressed: () {
-                  // TODO: 서버로 전송
-                },
+                onPressed: _submitPost,
+                style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                 child: const Text('작성하기'),
               ),
             ],

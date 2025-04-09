@@ -84,9 +84,6 @@ class SignUpScreen extends StatelessWidget {
                         }),
                       );
 
-                      print('🟡 응답 상태코드: ${response.statusCode}');
-                      print('🟡 응답 바디: ${response.body}');
-
                       if (response.statusCode == 200) {
                         if (!context.mounted) return;
                         _showDialog(context, '회원가입이 완료되었습니다!', onConfirm: () {
