@@ -1,6 +1,8 @@
+// 📱 LoginScreen.dart - 구글 로그인 연동 포함 (수정 완료)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:showtok/utils/auth_util.dart';
 import 'package:showtok/screens/main_screen.dart';
 import 'package:showtok/screens/signup_screen.dart';
@@ -35,12 +37,8 @@ class LoginScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 로고
               Image.asset('assets/logoplus.png', width: 200, height: 200),
-
-              const SizedBox(height: 20), // logotext와 입력칸 사이 간격 (2배)
-
-              // 아이디 입력
+              const SizedBox(height: 20),
               SizedBox(
                 width: 280,
                 child: TextField(
@@ -48,8 +46,7 @@ class LoginScreen extends StatelessWidget {
                   style: const TextStyle(fontSize: 11),
                   decoration: InputDecoration(
                     hintText: '아이디',
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: 8, horizontal: 12),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -57,8 +54,6 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // 비밀번호 입력
               SizedBox(
                 width: 280,
                 child: TextField(
@@ -67,8 +62,7 @@ class LoginScreen extends StatelessWidget {
                   style: const TextStyle(fontSize: 11),
                   decoration: InputDecoration(
                     hintText: '비밀번호',
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: 8, horizontal: 12),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -76,8 +70,6 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // 로그인 버튼
               SizedBox(
                 width: 280,
                 height: 48,
@@ -120,7 +112,6 @@ class LoginScreen extends StatelessWidget {
                         );
                       }
                     } catch (e) {
-                      print(e.toString());
                       showDialog(
                         context: context,
                         builder: (_) => const AlertDialog(
@@ -139,10 +130,7 @@ class LoginScreen extends StatelessWidget {
                   child: const Text('로그인'),
                 ),
               ),
-
               const SizedBox(height: 8),
-
-              // 회원가입 링크
               SizedBox(
                 width: 280,
                 child: Align(
@@ -159,26 +147,59 @@ class LoginScreen extends StatelessWidget {
                       minimumSize: const Size(0, 0),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text(
-                      '회원가입',
-                      style: TextStyle(color: Colors.black, fontSize: 12),
-                    ),
+                    child: const Text('회원가입', style: TextStyle(color: Colors.black, fontSize: 12)),
                   ),
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // 구글 로그인 버튼
               SizedBox(
                 width: 280,
                 height: 48,
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    // TODO: 구글 로그인 처리
+                  onPressed: () async {
+                    try {
+                      final googleSignIn = GoogleSignIn(
+                        clientId: '253537541471-9nic76ab5iemn24fok7o9kqddpr67mc4.apps.googleusercontent.com',
+                      );
+                      final account = await googleSignIn.signIn();
+                      if (account == null) return;
+                      final email = account.email;
+                      final name = account.displayName ?? 'GoogleUser';
+
+                      final response = await http.post(
+                        Uri.parse('${ApiConfig.baseUrl}/api/auth/oauth/google'),
+                        headers: {'Content-Type': 'application/json'},
+                        body: jsonEncode({'email': email, 'name': name}), // 👈 이름도 함께 전송
+                      );
+
+
+                      if (response.statusCode == 200) {
+                        final token = response.body;
+                        await AuthUtil.saveToken(token);
+                        if (!context.mounted) return;
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MainScreen()),
+                        );
+                      } else {
+                        print("❌ 백엔드 오류 응답: \${response.body}");
+                        showDialog(
+                          context: context,
+                          builder: (_) => const AlertDialog(content: Text('구글 로그인에 실패했습니다.')),
+                        );
+                      }
+                    } catch (e) {
+                      print("❌ 예외 발생: \$e");
+                      showDialog(
+                        context: context,
+                        builder: (_) => const AlertDialog(
+                          title: Text('오류'),
+                          content: Text('구글 로그인 중 오류가 발생했습니다.'),
+                        ),
+                      );
+                    }
                   },
-                  icon: Image.asset('assets/google_logo.png',
-                      width: 20, height: 20),
+                  icon: Image.asset('assets/google_logo.png', width: 20, height: 20),
                   label: const Text('구글로 로그인하기'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.black,
