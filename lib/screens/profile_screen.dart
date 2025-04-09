@@ -6,6 +6,7 @@ import 'package:showtok/screens/main_screen.dart';
 import 'package:showtok/utils/auth_util.dart';
 import 'package:showtok/constants/api_config.dart';
 import 'board_screen.dart';
+import 'message_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -80,7 +81,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      // 🔹 사용자 정보 박스
+
+// 🔹 사용자 정보 박스 (크레딧 받기 버튼 포함)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -95,29 +97,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ],
                         ),
-                        child: Row(
+                        child: Stack(
                           children: [
-                            const Icon(
-                              Icons.account_circle,
-                              size: 40,
-                              color: Colors.blueAccent,
-                            ),
-                            const SizedBox(width: 16),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
                               children: [
-                                Text(
-                                  nickname ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                const Icon(
+                                  Icons.account_circle,
+                                  size: 40,
+                                  color: Colors.blueAccent,
                                 ),
-                                const SizedBox(height: 4),
-                                Text('아이디: $username'),
-                                Text('전화번호: $phone'),
-                                Text('보유 크레딧: ${credit ?? 0}개'),
+                                const SizedBox(width: 16),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      nickname ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 4),
+                                    Text('아이디: $username'),
+                                    Text('전화번호: $phone'),
+                                    Text('보유 크레딧: ${credit ?? 0}개'),
+                                  ],
+                                ),
                               ],
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.blue[50],
+                                  foregroundColor: Colors.blue,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                                onPressed: () async {
+                                  final token = await AuthUtil.getToken();
+                                  final res = await http.post(
+                                    Uri.parse('${ApiConfig.baseUrl}/api/users/watch-ad'),
+                                    headers: {'Authorization': 'Bearer $token'},
+                                  );
+
+                                  if (res.statusCode == 200) {
+                                    setState(() {
+                                      credit = (credit ?? 0) + 1;
+                                    });
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('광고 보상 완료! 크레딧 +1')),
+                                      );
+                                    }
+                                  } else {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('크레딧 받기에 실패했습니다.')),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: const Text('크레딧 받기'),
+                              ),
                             ),
                           ],
                         ),
@@ -204,6 +251,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               context,
               MaterialPageRoute(builder: (_) => const MainScreen()),
             );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const MessageScreen()),
+            );
           } else if (index == 2) {
             Navigator.pushReplacement(
               context,
@@ -212,7 +264,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           } else if (index == 3) {
             // 현재 프로필 화면이므로 아무 동작 안 함
           }
-        },
+        }
+        ,
       ),
     );
   }

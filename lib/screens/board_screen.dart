@@ -3,28 +3,46 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:showtok/constants/api_config.dart';
-import 'package:showtok/utils/auth_util.dart';
 import 'package:showtok/screens/guest_profile_screen.dart';
 import 'package:showtok/screens/profile_screen.dart';
 import 'package:showtok/screens/main_screen.dart';
 import 'package:showtok/screens/post_create_screen.dart';
 import 'package:showtok/screens/post_detail_screen.dart';
+import 'package:showtok/utils/auth_util.dart';
+
+import 'message_screen.dart';
 
 class BoardScreen extends StatefulWidget {
-  const BoardScreen({super.key});
+  final String? initialKeyword;
+  final String? initialLevel;
+  final String? initialCategory;
+  final String? initialPostCategory;
+
+  const BoardScreen({
+    super.key,
+    this.initialKeyword,
+    this.initialLevel,
+    this.initialCategory,
+    this.initialPostCategory,
+  });
 
   @override
   State<BoardScreen> createState() => _BoardScreenState();
 }
 
 class _BoardScreenState extends State<BoardScreen> {
-  String selectedLevel = 'BEGINNER';
+  String selectedLevel = 'ALL';
   String selectedCategory = 'ALL';
   String keyword = '';
   String postCategory = 'FREE';
   List<Map<String, dynamic>> posts = [];
 
-  final levelMap = {'BEGINNER': '초급', 'INTERMEDIATE': '중급', 'ADVANCED': '고급'};
+  final levelMap = {
+    'ALL': '전체',
+    'BEGINNER': '초급',
+    'INTERMEDIATE': '중급',
+    'ADVANCED': '고급'
+  };
 
   final categoryMap = {
     'DRAWING': '그림',
@@ -40,13 +58,17 @@ class _BoardScreenState extends State<BoardScreen> {
   @override
   void initState() {
     super.initState();
+    keyword = widget.initialKeyword ?? '';
+    selectedLevel = widget.initialLevel ?? 'ALL';
+    selectedCategory = widget.initialCategory ?? 'ALL';
+    postCategory = widget.initialPostCategory ?? 'FREE';
     _fetchPosts();
   }
 
   Future<void> _fetchPosts() async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/api/posts/search').replace(
       queryParameters: {
-        'level': selectedLevel,
+        'level': selectedLevel == 'ALL' ? '' : selectedLevel,
         'category': selectedCategory == 'ALL' ? '' : selectedCategory,
         'postCategory': postCategory,
         'keyword': keyword,
@@ -292,7 +314,10 @@ class _BoardScreenState extends State<BoardScreen> {
               MaterialPageRoute(builder: (_) => const MainScreen()),
             );
           } else if (index == 1) {
-            // TODO: 쪽지 화면 연결
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MessageScreen()),
+            );
           } else if (index == 2) {
             // 현재 게시판 화면이므로 이동 없음
           } else if (index == 3) {

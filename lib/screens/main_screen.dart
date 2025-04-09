@@ -1,4 +1,3 @@
-// ✅ 전체 MainScreen.dart 파일 (인기글 + 게시판 탭 포함)
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -6,7 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:showtok/screens/profile_screen.dart';
 import 'package:showtok/screens/guest_profile_screen.dart';
 import 'package:showtok/screens/settings_screen.dart';
-import 'package:showtok/screens/board_screen.dart'; // 게시판 화면 import
+import 'package:showtok/screens/board_screen.dart';
+import 'package:showtok/screens/message_screen.dart';
+import 'package:showtok/screens/post_detail_screen.dart';
 import 'package:showtok/utils/auth_util.dart';
 import 'package:showtok/constants/api_config.dart';
 
@@ -35,24 +36,58 @@ class _MainScreenState extends State<MainScreen> {
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
 
+        final List<Map<String, dynamic>> loadedPosts = [];
+        for (final e in data) {
+          final likeRes = await http.get(
+            Uri.parse('${ApiConfig.baseUrl}/api/posts/${e['id']}/likes'),
+          );
+          final likeCount = likeRes.statusCode == 200 ? int.tryParse(likeRes.body) ?? 0 : 0;
+
+          loadedPosts.add({
+            'id': e['id'],
+            'title': e['title'],
+            'category': _convertCategoryToKorean(e['category']),
+            'likeCount': likeCount,
+            'commentCount': e['commentCount'] ?? 0,
+          });
+        }
+
         setState(() {
-          popularPosts =
-              data
-                  .map<Map<String, dynamic>>(
-                    (e) => {
-                      'title': e['title'],
-                      'category': e['category'] ?? '카테고리 없음',
-                      'likeCount': e['likeCount'] ?? 0,
-                      'commentCount': e['commentCount'] ?? 0,
-                    },
-                  )
-                  .toList();
+          popularPosts = loadedPosts;
         });
       } else {
         print('🔥 서버 응답 에러: ${res.statusCode}');
       }
     } catch (e) {
       print('🔥 인기글 로딩 오류: $e');
+    }
+  }
+
+  void _onCategoryTap(String label) {
+    final keyword = label.split(" / ").first;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BoardScreen(
+          initialKeyword: keyword,
+          initialLevel: 'ALL',
+          initialCategory: 'ALL',
+          initialPostCategory: 'INFO',
+        ),
+      ),
+    );
+  }
+
+  String _convertCategoryToKorean(String? category) {
+    switch (category) {
+      case 'DRAWING': return '그림';
+      case 'CODING': return '코딩';
+      case 'HOMEWORK': return '과제';
+      case 'MUSIC': return '음악';
+      case 'WRITING': return '글쓰기';
+      case 'PHOTO_VIDEO': return '영상';
+      case 'FASHION': return '패션';
+      default: return '카테고리 없음';
     }
   }
 
@@ -89,42 +124,6 @@ class _MainScreenState extends State<MainScreen> {
     {'emoji': '🕹️', 'label': '게임 AI'},
   ];
 
-  void _showCategoryPopup(BuildContext context, String label) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$label 카테고리',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...['초급', '중급', '고급', '게시판'].map((level) {
-                return ListTile(
-                  leading: const Icon(Icons.chevron_right),
-                  title: Text(level),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                );
-              }),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -133,18 +132,23 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: Colors.white,
         elevation: 0.5,
         leading: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.only(left: 5.0, top: 2.0, bottom: 2.0),
           child: Row(
             children: [
-              Image.asset('assets/logo2.png', width: 32),
+              Image.asset('assets/logo2.png', width: 100, height: 80),
             ],
           ),
         ),
-        leadingWidth: 140,
+        leadingWidth: 160,
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: Colors.black),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BoardScreen()),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.black),
@@ -162,7 +166,6 @@ class _MainScreenState extends State<MainScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // 🔥 인기글 박스
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -181,16 +184,18 @@ class _MainScreenState extends State<MainScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '🔥 인기글 TOP 3',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    const Text('🔥 인기글 TOP 3', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
-                    ...popularPosts.map(
-                      (post) => Padding(
+                    ...popularPosts.map((post) => InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PostDetailScreen(postId: post['id']),
+                          ),
+                        );
+                      },
+                      child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 6.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,27 +204,15 @@ class _MainScreenState extends State<MainScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Expanded(
-                                  child: Text(
-                                    post['title'],
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                  child: Text(post['title'], style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
                                 ),
                                 Row(
                                   children: [
-                                    const Icon(
-                                      Icons.thumb_up_alt_outlined,
-                                      size: 14,
-                                    ),
+                                    const Icon(Icons.thumb_up_alt_outlined, size: 14),
                                     const SizedBox(width: 2),
                                     Text('${post['likeCount']}'),
                                     const SizedBox(width: 8),
-                                    const Icon(
-                                      Icons.comment_outlined,
-                                      size: 14,
-                                    ),
+                                    const Icon(Icons.comment_outlined, size: 14),
                                     const SizedBox(width: 2),
                                     Text('${post['commentCount']}'),
                                   ],
@@ -231,12 +224,10 @@ class _MainScreenState extends State<MainScreen> {
                           ],
                         ),
                       ),
-                    ),
+                    )),
                   ],
                 ),
               ),
-
-              // 📂 카테고리 박스
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -254,13 +245,7 @@ class _MainScreenState extends State<MainScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '📂 카테고리',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    const Text('📂 카테고리', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 24),
                     GridView.count(
                       crossAxisCount: 3,
@@ -269,41 +254,28 @@ class _MainScreenState extends State<MainScreen> {
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                       childAspectRatio: 1.2,
-                      children:
-                          aiCategories.map((category) {
-                            return InkWell(
-                              onTap:
-                                  () => _showCategoryPopup(
-                                    context,
-                                    category['label'],
-                                  ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE0F2F1),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      category['emoji'],
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        height: 1.1,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    category['label'],
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                ],
+                      children: aiCategories.map((category) {
+                        final isVideo = category['label'] == '영상 제작';
+                        return InkWell(
+                          onTap: () => _onCategoryTap(category['label']),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: isVideo ? 48 : null,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE0F2F1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(category['emoji'], style: const TextStyle(fontSize: 24, height: 1.1)),
                               ),
-                            );
-                          }).toList(),
+                              const SizedBox(height: 4),
+                              Text(category['label'], textAlign: TextAlign.center, style: const TextStyle(fontSize: 13)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ],
                 ),
@@ -316,38 +288,24 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: Colors.white,
         selectedItemColor: Colors.black,
         unselectedItemColor: Colors.grey,
-        currentIndex: 0, // 홈 화면 기준
+        currentIndex: 0,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
           BottomNavigationBarItem(icon: Icon(Icons.mail_outline), label: '쪽지'),
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: '게시판'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: '프로필',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: '프로필'),
         ],
         onTap: (index) async {
-          if (index == 0) {
-            // 현재 화면이 홈이면 무시하거나 새로고침 등 처리 가능
-          } else if (index == 1) {
-            // 쪽지 화면은 아직 구현 전이라면 나중에 연결
+          if (index == 1) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const MessageScreen()));
           } else if (index == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const BoardScreen()),
-            );
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const BoardScreen()));
           } else if (index == 3) {
             final loggedIn = await AuthUtil.isLoggedIn();
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder:
-                    (_) =>
-                        loggedIn
-                            ? const ProfileScreen()
-                            : const GuestProfileScreen(),
-              ),
+              MaterialPageRoute(builder: (_) => loggedIn ? const ProfileScreen() : const GuestProfileScreen()),
             );
           }
         },

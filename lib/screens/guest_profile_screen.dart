@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import 'main_screen.dart'; // ✅ 메인화면 임포트
 import 'board_screen.dart';
+import 'package:showtok/screens/message_screen.dart';
+
 
 class GuestProfileScreen extends StatelessWidget {
   const GuestProfileScreen({super.key});
@@ -134,6 +136,11 @@ class GuestProfileScreen extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (_) => const MainScreen()),
             );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const MessageScreen()),
+            );
           } else if (index == 2) {
             Navigator.pushReplacement(
               context,
@@ -142,7 +149,8 @@ class GuestProfileScreen extends StatelessWidget {
           } else if (index == 3) {
             // 현재 프로필 화면이므로 아무 동작 안 함
           }
-        },
+        }
+        ,
       ),
     );
   }
